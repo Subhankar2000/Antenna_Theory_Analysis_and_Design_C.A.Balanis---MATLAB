@@ -1,5 +1,5 @@
 % *********************************************************************
-% Aperture.m
+% Aperture
 % *********************************************************************
 % Programmed by Xin Xie, 11/2002
 % Reference: "Antenna Theory: Analysis and Design", Third Edition '
