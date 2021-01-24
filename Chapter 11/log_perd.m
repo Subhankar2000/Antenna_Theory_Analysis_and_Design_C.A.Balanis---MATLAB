@@ -1,7 +1,7 @@
 function analdesg
 
 %*****************************************
-% written by                             %       
+% written b                             %       
 %                                        % 
 % Tassos Panaretos                       %
 % Arizona State University               %
