@@ -1,5 +1,5 @@
 %*******************************************************************************
-%      PYRAMIDAL HORN: ANALYSIS
+%      PYRAMIDA HORN: ANALYSIS
 %**************************************************************************
 %
 %     THIS PROGRAM COMPUTES FOR A PYRAMIDAL HORN THE:
