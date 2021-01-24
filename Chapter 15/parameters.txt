@@ -1,0 +1,34 @@
+%   TYPICAL INPUT DATA                                      Values                 
+%   ...................................................................
+%   Frequency (GHz)                                             3
+%   ...................................................................
+%   REFLECTOR INFORMATION:
+%   ...................................................................
+%   Focus (meters)                                              6
+%   Diameter (meters)                                           6
+%   Offset height (meters)                                      0
+%   ....................................................................
+%   FEED INFORMATION:
+%   ....................................................................
+%   Feed location of x axis (meters)                            0
+%   Feed location of y axis (meters)                            0
+%   Feed location of z axis (meters)                            6
+%   Feed tilt angle (degrees)                                   0
+%   Number of integration points per wavelength (typically 4)   4
+%   q parameter for feed pattern [f(theta)=cos(theta)^q]        2.3
+%   .....................................................................
+%   OBSERVATION INFORMATION
+%   .....................................................................
+%   Radial distance to observation point (typically 1,000 m)    1000
+%   Minimum theta angle (degrees)                               0
+%   Maximum theta angle (degrees)                               30
+%   Phi angle (degrees)                                         0
+%   Number of observation angles                                31
+%   [typically =theta(max)-theta(min)+1 for one-degree increments] 
+%   .....................................................................
+%   POLARIZATION INFORMATION
+%   .....................................................................
+%   X POL                                                       1
+%   Y POL                                                       1
+%   Phase difference PSI between X POL and Y POL (degrees)      90
+%   .....................................................................

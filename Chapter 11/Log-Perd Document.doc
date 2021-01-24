@@ -1,0 +1,1102 @@
+            INSTRUCTIONS FOR USING THE LOG-PERIODIC
+
+                  DIPOLE ARRAY DESIGN PROGRAM
+
+
+
+Note:  This document should be viewed from an editor which does
+not use proportional fonts such as the DOS EDIT editor or the
+Windows NOTEPAD editor.  Alternatively, it can be printed or
+viewed with a non-proportional font such as Courier.  In this
+manner, the various text figures can be fully appreciated.
+
+
+
+     This documentation file contains information for the correct
+use of the log-periodic dipole array (LPDA) design program
+included with the book, ANTENNA THEORY:  ANALYSIS AND DESIGN, by 
+Constantine A. Balanis.  When the design program is first run, 
+the many input variables can be confusing, especially since many
+of them represent impedances - characteristic, load, source, and
+desired input impedances.  Furthermore, the program utilizes 
+some approximations which need to be fully understood by the
+user.  Only with this kind of detailed knowledge can the user
+fully appreciate the difficulty of accurately modeling antennas.  
+Finally, many of the sources for the equations come directly 
+from this book, but others come from elsewhere.  For instance, 
+the transmission line theory from introductory electromagnetics 
+forms a key part of the analysis.  Therefore, the references for 
+this work are summarized at the end of the document.
+
+     This file contains ten parts as follows:
+
+          1.     Geometry definitions
+            1.1.  Antenna Geometry
+            1.2.  Coordinate Geometry
+          2.     Discussion of input parameters
+            2.1.  Design Parameters
+            2.2.  Analysis Parameters
+          3.     Algorithm development
+            3.1.  Self and Mutual Impedances
+            3.2.  Transmission Line Admittance Matrix
+            3.3.  Combining the Matrices
+            3.4.  Finding the Input and Termination Currents
+            3.5.  Finding the Critical Parameters
+          4.     Subtleties and assumptions
+          5.     Output parameters
+          6.     Verification and validation summary
+          7.     FORTRAN Compilation
+          8.     Credits
+          9.     References
+
+
+1.  GEOMETRY DEFINITIONS
+
+
+1.1.  ANTENNA GEOMETRY
+
+     The geometry utilized for the analysis largely corresponds
+to the geometry of Figure 11.9(a) in the book.  FIGURE 1 shows
+this geometry redrawn.
+
+               Element Number:
+               1  2   3   ...  N
+                                |
+                       |        |
+                  |    |        |
+               |  |    |        |
+           x
+         ->| R1|<-|    |        |
+           |<-R2->|    |        |
+           |<--- R3 -->|        |
+           |<------  RN  ------>|
+           |
+         Apex
+
+         FIGURE 1.  Array Geometry
+
+     Several important additions are not shown in this figure. 
+First, something must energize the antenna.  This source is
+generally a voltage source with an internal resistance, Rs. 
+This voltage source is connected to the shortest element,
+element 1, by means of a source transmission line which is
+different from the transmission line (often referred to as the
+"boom") which connects the antenna elements.  Often this source 
+transmission line is a coaxial cable.  The center conductor is 
+connected to one side of element 1, and the shield is connected 
+to the other side of element 1.  There are many subtleties 
+associated with this connection, but this analysis ignores them.
+
+     The effect of including the source resistance, Rs, is a
+reduction in the antenna efficiency from 100% to something less.
+For instance, let us assume the antenna has an input impedance
+of 50 Ohms as measured at the input terminals of element 1.
+Further assume the source transmission line characteristic
+impedance is 50 Ohms so that it is matched to the antenna.  If
+there were no source resistance, the antenna efficiency would be
+100%.  Now assume that a 5 Ohm source resistance (internal to the
+voltage generator) were present.  The resulting circuit can be
+analyzed as shown in FIGURE 2.
+
+          |--- 5 Ohms --------------|
+          |   (source               |
+          |    resistance)          |
+      1V  O                       50 Ohms (antenna)
+      ac  |                         |
+          |                         |
+          |-------------------------|
+
+      FIGURE 2.  Equivalent Circuit Considering the
+                 Antenna as a Load
+
+The proportion of voltage transferred to the load (50 Ohms) is
+
+                50
+         %V = ------ 100% = 91%
+              50 + 5
+
+The fraction of power received by the load is equal to (%V)**2 or
+
+         %P = (0.91)(0.91) 100% = 83%
+
+83% is the antenna efficiency neglecting other sources of
+inefficiency.  This efficiency factor results in a decrease in
+gain from the published values, such as in Figure 11.13.  The moral
+of this calculation is that design equations tend to yield the
+best possible answer and that other mechanisms can degrade the
+real-world results.  Only careful modeling and attention to
+detail can prevent substandard performance.
+
+     The other side of the antenna, that is, the side with the
+longest element, also has an additional feature:  a termination
+impedance is added across the terminals of element N (the
+longest element).  To understand why this is necessary, consider
+first an antenna without a termination impedance.  Instead, the
+transmission line is left open.  What happens if some energy,
+injected at element 1, manages to continue down the antenna
+transmission line past the active region to strike the open
+circuit.  Transmission line theory says it reflects from the
+open and travels back toward the source.  While this means more
+energy could be radiated (the reflected energy has a second
+chance to radiate), it also means that interference effects will
+occur.  Experimentation with this program will show that this
+interference will result in a design whose VSWR versus frequency
+contains many spikes at particular frequencies.  In contrast, if
+a termination impedance is added which has the same value as the
+effective antenna transmission line characteristic impedance,
+all energy which travels past the active region will be absorbed
+by the load.  The resulting VSWR is much smoother than the
+previous case.
+
+     Why would a designer choose one reflection elimination
+technique over another?  Using a matched load is the best
+solution in terms of performance, but often it is difficult,
+undesirable, or not cost effective to solder a resistor across
+the longest element's terminals.  The quarter-wave transformer
+is cheaper and easier to construct and provides an improvement
+over not doing anything.  However, it also makes the physical
+size of the antenna longer, a possible disadvantage.
+
+     FIGURE 3 shows the resulting antenna geometry.
+
+                                |
+                       |        |
+     <- LLin ->   |    |        |<- LLout ->
+     __________|  |    |        |___________
+   Rs__________                  ___________Zout
+         ->| R1|<-|    |        |
+           |<-R2->|    |        |
+           |<--- R3 -->|        |
+           |<------  R4  ------>|
+           |
+         Apex
+
+   FIGURE 3.  Geometry Showing the Source and
+              Termination Transmission Lines
+              and Impedances
+
+     In addition to the placements of the elements, sources, and
+terminations, one must also consider the construction of the
+antenna transmission line.  Because this transmission line
+generally, though not always, provides a structure upon which to
+mount the antenna elements, it is also called a "boom."  The
+boom often consists of a twin lead transmission line made from
+two copper tubes as shown in detail in Figure 11.9(d) in the
+book.  This construction actually represents a departure from a
+truly log-periodic design.  The geometry of truly frequency
+independent antennas is a function of (apex) angle only[1].  For
+instance, the truncation of the antenna at elements 1 and N is
+not a function of the apex angle, Alpha, but rather of the
+distances R1 and RN (see Figure 11.9(a) in the book).  The
+result is an antenna which operates over a frequency band
+(albeit a large one), not over all frequencies.  Therefore, the
+spacing and diameters of the two tubes which form the boom
+should increase linearly with distance from the apex.  At the
+apex they should be spaced by zero and have zero diameter.  It
+is also for this reason that the diameters of the elements
+increase with distance from the apex.
+
+     Although maintaining constant element diameters can have a
+noticeable effect on the pattern, maintaining constant boom
+spacing and boom tube diameters has a very minor effect on the
+pattern.  For this reason and for convenience, the boom
+center-to-center spacing is fixed at SB, and the boom tube
+diameters is fixed at DB.  These two parameters are sufficient
+to calculate the characteristic impedance of the boom
+transmission line (without the elements attached)[2][3].
+
+
+1.2.  COORDINATE GEOMETRY
+
+     While the antenna geometry given in Section 1.1 is enough to
+design the antenna, a coordinate system is needed for the
+analysis.  FIGURE 4 shows the coordinate system for analysis.
+
+                     Z axis
+                       ^
+                       |
+              ________ | ________
+                       |
+                       |
+                ______ | ______
+                       |
+                   ___ | ___
+                       |
+                     _ | _
+                       |
+            Apex ----->O-------------->  y axis
+                     X axis
+                 (out of page)
+
+            FIGURE 4.  Coordinate System
+
+Furthermore, the angle Phi is measured from the x axis toward
+the y axis in the x-y plane.  The angle Theta is measured from
+the z axis toward the x-y plane.
+
+     The E-plane is defined as the plane which contains the
+electric field vectors and also the major axis (here, the z
+axis) of the antenna.  Since the E-field develops where there is
+a voltage drop (V = Integral(-E * dl) and since there is a
+voltage drop from one side of each element to the other, the
+E-plane is the y-z plane.  The H-plane also contains the z axis 
+and is perpendicular to the E-plane.  Therefore, the H-plane is 
+the x-z plane.  In terms of Phi and Theta, the E-plane has Phi 
+fixed at 90 or 270 degrees, and Theta is allowed to vary from
+0 to 180 degrees on both sides of the z axis.  The H-plane has
+Phi at 0 or 180 degrees and Theta is allowed to vary from 0 to
+180 degrees on both sides of the z axis.  One important
+consequence of these definitions is that the boresight of the
+antenna is at Theta equal to 180 degrees, not Theta equal to
+0 degrees.  (Here, "boresight" refers to the direction of the
+mechanical axis of the antenna.  In other contexts, "boresight"
+is the direction where the pattern is maximum.) 
+
+
+2.  DISCUSSION OF INPUT PARAMETERS
+
+     Now that we have defined the geometry, it is important to
+precisely understand each term and its representation in the
+program.  Some parameters can be calculated from others.
+
+
+2.1.  DESIGN PARAMETERS
+
+   INPUT VARIABLES *
+     TITLE  = Design title
+     D0     = Desired gain
+     Fhigh  = Upper design frequency
+     Flow   = Lower design frequency
+     Rs     = Source impedance internal to the voltage generator
+     ZCin   = Characteristic impedance of the input transmission
+              line
+     Rin    = DESIRED input impedance, measured at the terminals
+              of element 1 (the shortest element)
+     LLin   = Line length of the input transmission line
+     Zout   = Termination impedance
+     LLout  = Line length of termination transmission line
+     LD     = Length to diameter ratio of antenna elements
+     Navail = Number of available wires or tubes for the elements
+     Davail = Diameters of available tubes for the elements
+     SB     = Spacing of boom tubes or wires
+     DB     = Diameter of boom tubes or wires
+     Tau    = Geometric ratio (see Section 11.4.2)
+     Sigma  = Spacing factor (see Section 11.4.2)
+
+   DESIGN VARIABLES **
+     L(n)   = Total length of element n
+     D(n)   = Diameter of element n
+     ZL(n)  = Location along the z axis of element n
+     ZO     = Characteristic impedance of antenna transmission
+              line
+     ZinA   = ACTUAL input impedance, measured at the terminals
+              of element 1 (the shortest element)
+              
+   *  Note that some of the input variables listed in the book
+      are listed in Section 2.2., ANALYSIS PARAMETERS.
+   ** Note that this list is somewhat abbreviated and that some
+      variables, such as Tau and Sigma, can be considered as
+      belonging to more than one category.
+     
+     Now that each design parameter is defined, how does one go
+about choosing values?  For starters, some parameters are
+available for more precise modeling of a particular application
+or design.  For this reason, the source impedance (Rs), input
+line length (LLin), and the output line length (LLout) all can
+be set to zero.  Furthermore, setting the option to not quantize
+the element diameters forces the program to ignore Navail and
+Davail.
+
+     Certain parameters must be known by the designer before the
+design.  These include the characteristic impedance of the
+source transmission line (ZCin), the frequency range (Fhigh and
+Flow), and the desired gain (D0).  If the characteristic
+impedance of the source transmission line (ZCin) is not known,
+guess:  for most coaxial cable in the UHF band is 50 or 75 Ohms. 
+Since we want to match the antenna to this cable, the desired
+input impedance (Rin) should be equal to the source transmission
+line characteristic impedance (ZCin).  Selecting the desired gain
+sets Tau and Sigma for an optimum design.  Alternatively,
+selecting Tau and Sigma allows independent control for special
+applications.  All other parameters will be calculated by the
+program.
+
+     Since the program only estimates the transmission line
+characteristic impedance (ZO) for the antenna to achieve the
+desired input impedance (Rin), the actual input impedance (ZinA)
+may not be correct.  For instance, assume that the actual input
+impedance (ZinA) comes out to be 60 to 65 Ohms for a 50 Ohm
+desired input impedance (Rin).  In this case, lower the desired
+input impedance (Rin) so that the actual input impedance (ZinA)
+comes out nearly correct (that is, approximately equal to ZCin).
+More accurate estimates for ZO exist.[4][5]
+
+     Now that the design is complete and satisfactory, quantize
+the element diameters to the available wire or tube diameters. 
+This quantization rounds each calculated element diameter to the
+nearest available size.  The variable, Navail, tells how many
+sizes are available.  Davail contains the available diameters. 
+Next, perturb the design by adding a source impedance of about 
+5 Ohms.  This should decrease the gain by about 1 dB for an
+antenna with an input impedance (ZinA) 50 Ohms matched to a
+50 Ohm source transmission line.
+
+     Finally, add a matched load (Zout) to suppress reflections
+from the open-circuit termination.  Notice the resulting
+decrease in VSWR at many frequencies.
+
+
+2.2.  ANALYSIS PARAMETERS
+
+     In addition to the design parameters, the input screens
+also ask for certain analysis parameters.  The user can select
+single frequency E- and H-plane analyses, single frequency
+custom plane analysis, and/or swept frequency analysis.  The
+input parameters are as follows.
+
+     AFSEH  = Frequency for single frequency analysis of E- and
+              H- planes
+     AFSC   = Frequency for single frequency analysis of custom
+              plane
+     AFhigh = Upper analysis frequency for swept frequency
+              analysis
+     AFlow  = Lower analysis frequency for swept frequency
+              analysis
+     Phi    = Angle of custom plane (90 degrees equals E-plane,
+              0 degrees equals H-plane)
+     AFpowr = Number of frequency steps per octave
+
+     All parameters are self-explanatory except the last.  For
+swept frequency analysis, the program starts at the lowest
+analysis frequency, AFlow, and after each iteration increases
+the analysis frequency by a certain amount until it exceeds the
+upper analysis frequency.  The step size, AFstep, is defined by
+the following relation.
+
+     AFstep = FMHz * 10 ** (1/AFpowr)
+
+where FMHz is the current analysis frequency.  This relation has
+the advantage of providing equally spaced points when frequency
+is plotted on a logarithmic scale.  Increasing AFpowr increases
+the resolution.
+
+
+3.  ALGORITHM DEVELOPMENT
+
+     Some of the algorithms have already been explained, but for
+the sake of clarity, all will be explained here.  There is
+nothing fantastically difficult about any particular step of the
+algorithm, but taken together there are so many topics that it
+is easy to become confused.
+
+     Since the design of the antenna is covered in the book, it
+will be omitted here.  Let us begin the discussion knowing the
+topology of the design, as if we had an antenna in hand, so that
+we are ready to analyze it.
+
+     There are several steps to the analysis of the antenna. 
+First, we must calculate the self and mutual impedances of each
+antenna element.  These calculations tell us how each excited
+element interacts with each other element and how well each
+antenna radiates.  Next, we need to calculate the
+characteristics of the antenna transmission line.  This
+calculation accounts for the termination impedance (Zout) as
+well as the source impedance (Rs).  It tells us how energy
+propagates down the transmission lines.  Third, we need to solve
+for the currents on each antenna element as well as the input
+current (Iin) and voltage (Vin) and the termination current
+(Iout) and voltage (Vout).  Finally, we calculate the gain,
+VSWR, and other important parameters.
+
+
+3.1.  SELF AND MUTUAL IMPEDANCES
+
+     The self and mutual impedances of radiating elements is a
+subject of much research.  To understand the basic idea[8],
+consider several radiating elements located in space.  Now
+remove all elements except one, for instance element 1, and
+excite it with a current.  The input impedance can be measured
+as the ratio of the input voltage over the input current.  This
+is the self impedance denoted Z11.  Now replace one of the other
+elements, say element 2, and short its terminals together. 
+Recalculate the input impedance of element 1.  This is the
+mutual impedance denoted Z12 (impedance of element 1 due to
+element 2).  Repeat the process for every pair of antennas. 
+(The measurements can be roughly halved, because reciprocity
+assures us that Z12 = Z21.  This means the resulting matrix is
+symmetric.)
+
+      To obtain very accurate results, finite difference methods
+and projection methods, which include moment methods and
+finite element methods often are used.  Finite difference
+methods approximate the governing differential equations by
+mathematically dividing the surface into very small segments, then
+approximating a derivative by the equation
+
+           f(x2) - f(x1)
+     df = ---------------
+              x2 - x1
+
+  For projection methods, a set of basis functions which satisfy
+the boundary conditions are weighted and summed to form an
+approximate answer.  For moment methods, the basis functions are
+valid for the entire antenna surface.  For finite element
+methods, the basis functions are valid over a small part of the
+antenna surface.
+
+     An alternative approach, and the one used here, assumes
+that the current distribution along each antenna varies
+sinusoidally.  This assumption is valid for infinitesimally thin
+dipoles sitting alone in space.  While this assumption is not
+totally valid, the approximation is still a good one.
+
+     With this assumption, the self and mutual impedances can be
+written as integral equations.  These equations can be
+recast in terms of the sine and cosine integrals[9][10].  With
+these equations, the symmetric matrix, called ZA in the program,
+can be found.
+
+
+3.2.  TRANSMISSION LINE ADMITTANCE MATRIX
+
+     Next, we must compute the characteristics of the antenna
+transmission line.  Good documentation can be found in the
+literature [6][7][8], although these references can
+sometimes be hard to find.  Therefore, a summary will be
+presented here.  We wish to create the same kind of data for the
+transmission line as we did for the self and mutual impedances. 
+That is, we will excite the transmission line with a unit
+voltage everywhere an antenna element attaches, one place at a
+time.  The remaining places will be shorted.  This procedure is
+derived directly from N-port admittance matrix theory.  The task
+is to find the resulting current at each port (place of antenna
+attachment).
+
+     FIGURE 5 illustrates the concept for an N element antenna
+excited at port 4.  Only a few of the ports are shown.  The
+distance between ports is given by the variable DZL.
+
+            PORT:  2        3        4        5         
+          ----------------------------------------------
+                   |        |        +        |         
+                   |        |                 |         
+                   |        |                 |         
+                   |        |                 |         
+           o o o   |        |        V        |    o o o 
+                   |        |                 |         
+                   |        |                 |         
+                   |        |                 |         
+                   |        |        -        |         
+          ----------------------------------------------
+                   |<-DZL2->|<-DZL3->|<-DZL4->|         
+
+          FIGURE 5.  Transmission Line Equivalent Circuit
+
+     For the following discussion, please refer to any standard
+electromagnetics text.  For example, see [2][3].  Also see
+[4][7][8].
+
+     It is obvious by inspection that given an excitation at
+element 4, a current will flow only through the shorts at ports
+3, 4, and 5.  Current will not flow at the other ports.  The
+current at port 4 is the current through the source, V.  The
+transmission line equation tells us that the impedance seen by
+port 4 in the direction of port 3 is equal to
+
+     Z43 = j ZO tan(Beta * DZL3)
+
+where ZO is the characteristic impedance of the line, and Beta
+is the wavenumber.  The admittance (Y) is one over the impedance
+so,
+
+     Y43 = -j YO cot(Beta * DZL3)
+
+where YO = 1/ZO.  Similarly, the admittance seen by port 4 in
+the direction of port 5 is 
+
+     Y45 = -j YO cot(Beta * DZL4)
+
+Therefore, the current flowing through port 4 (excited by a unit
+voltage) is
+
+     Y43 + Y45 = I4 / 1
+
+     To find the current in port 3, the following general
+transmission line equation is used.
+
+     V(DZL3) = V3 * cos(Beta*ZL3) + j * I3'' * ZO * sin(Beta*ZL3)
+
+where V3 and I3'' are the voltage and current at port 3,
+respectively.  (Note:  the primes do not represent
+differentiation.)  Since port 3 is shorted, V3 = 0. 
+Furthermore, V(DZL3) is just the excitation voltage, 
+V4 = 1 Volt.  Therefore,
+
+     1 = j * I3'' * ZO * sin(Beta*ZL3)
+
+or
+
+     I3'' / 1 = -j YO * csc(Beta*L)
+
+However, this definition of I3'' is reversed from that of the
+standard N-port definitions;  it flows out of the port instead
+of in to it.  Therefore, we remove one prime ('') and change the
+sign.
+
+     I3' / 1 = j YO * csc(Beta*L)
+
+One step remains.  Since we arranged for a phase reversal by
+crossing the wires in the transmission line [], we must account
+for this by changing the sign again.  The final form for the
+current is then
+
+     I3 / 1 = -j YO * csc(Beta*L)
+
+The admittance seen in port 3 due to an excitation at port 4 is
+then
+
+     Y34 = -j YO * csc(Beta*L)
+
+     Notice that the resulting matrix will be tri-diagonal. 
+That is, it will have non-zero elements only along its major
+diagonal and the diagonals on either side of it.
+
+     The termination impedance is accounted when the admittance
+seen by element N is calculated.  The transmission line equation
+tells the equivalent impedance seen by element N in the direction
+of the load.
+
+     The program does not use the admittance matrix to account for
+the source transmission line and source resistance.  Instead,
+it accounts for the effect of these items later after the solution
+for the antenna is obtained.
+
+     The resulting tri-diagonal admittance matrix is called YT in
+the program.
+
+
+3.3.  COMBINING THE MATRICES
+
+     At this point we have one matrix, ZA, which describes how
+the elements interact with each other.  Another matrix, YT,
+describes how the transmission line propagates energy.  We wish
+to combine the two.  Following [7], the connection of the
+N-port antenna elements network (ZA) and the N-port transmission
+line network (YT) amounts to connecting the two N-ports in
+parallel.  Therefore we can write that
+
+     Iel = YA Vel
+     IT = YT VT
+
+where Iel is the current at the input to the antenna elements
+         (A column vector)
+      YA is the inverse of ZA
+         (A square matrix)
+      Vel is the voltage at the input to the antenna elements
+         (A column vector)
+      IT is the current at the ports of the transmission line
+         (A column vector)
+      VT is the voltage at the ports of the transmission line
+         (A column vector)
+
+Since the connection occurs in parallel, the total current is
+then
+
+     I = Iel + IT
+
+Here, I represents the excitation current.  For a log-periodic
+dipole array, we excite the shortest element, element 1, only. 
+Therefore, I = [1 0 0 ... 0]T (T denotes transpose).  When
+we make the connection, Vel = VT.  Therefore,
+
+     I = (YA + YT) Vel
+
+(Here this text departs from [7].)  We want the voltages on each
+antenna element measured at the port.  Therefore, we rewrite
+this equation as
+
+     (ZAZT) = inverse of (YA + YT)
+
+     Vel = (ZAZT) I
+
+From this,
+
+     Iel = YA Vel
+
+     The references [4][6][7] recast the equations slightly to make
+them faster to evaluate.  For this program, the straightforward
+approach is fast enough.
+
+
+3.4.  FINDING THE INPUT AND TERMINATION CURRENTS
+
+     Now at last we have the antenna currents and voltages. 
+Before we calculate the critical parameters, let us find the
+source and termination currents and voltages.  For this theory,
+we again consult [2][3], and write
+
+     I(z') = IL * cos(Beta*z') + j * VL / ZO * sin(Beta*z')
+     V(z') = VL cos(Beta*z') + j * IL * ZO * sin(Beta*z')
+
+Here, z' is a distance measured from the load to the source
+      VL is the voltage at the load
+      IL is the current at the load
+      ZO is the characteristic impedance of the transmission line
+
+To find the source current and voltage, we reduce the antenna to
+the source generator, Vin, and an equivalent impedance which
+replaces everything but the source and the input transmission
+line (ZinA).  The result is a diagram similar to FIGURE 2 where 
+the antenna becomes the load.  Therefore, we set  
+
+     z'    = LLin (Length of source transmission line)
+     V(z') = Vin'
+     I(z') = Iin
+     VL    = Vel1
+     IL    = 1
+     ZO    = ZCin
+     
+Note that
+
+     ZinA = Vel1 / 1 Amp = Vel1
+     
+This is the input impedance measured at the shortest element of
+the dipole array.  The result of the above substitutions is 
+
+     Iin  = cos(Beta*LLin) + j * Vel1 / ZO * sin(Beta*LLin)
+     Vin' = Vel1 * cos(Beta*LLin) + j * ZO * sin(Beta*LLin)
+
+These are explicit expressions for Iin and Vin'.  Vin' is the
+voltage, not at the source, but after the current drop across
+the source resistance is accounted as shown in Figure 6.
+
+                         Iin->
+          |--- Rs -------------| + Vin'
+          |   (source          |
+          |  resistance)    (ZinAS - antenna impedance
+     Vin  O                  as seen by the
+          |                  voltage source)
+          |                    |
+          |--------------------| -
+          
+     FIGURE 6. Vin, Iin, and Vin'
+                 
+                 Rs + ZinAS
+Therefore, Vin = ---------- Vin'
+                   ZinAS
+
+ZinAS can be determined from the transmission line equation
+or by
+
+     ZinAS = Vin'/Iin
+     
+It is the antenna input impedance as seen by the source.
+
+The power accepted by the antenna is
+
+           1
+     Pin = - (Iin) (Iin*) [real(ZinAS) + Rs]
+           2
+
+where * indicates complex conjugate.
+
+     Note that confusion might exist about the definition of
+the input impedance.  There are two definitions:  ZinA is the
+input impedance measured at the shortest element of the
+antenna array, and ZinAS is the input impedance as seen by the
+voltage source.  Note that the magnitude of ZinAS will vary
+with the length of the input transmission line.  The reason
+for this is that for an antenna which is not precisely matched
+to the characteristic impedance of the input transmission line,
+a standing wave exists on this line.  For this reason, a design
+engineer might be interested in both measures od input impedance.
+
+     Finding the termination current and voltage is similar.
+This time the antenna is the source and the termination is the
+load.  The above equations must be turned around to yield
+
+     Vout = VelN * cos(Beta*LLout) - j*IN'  * ZO*sin(Beta*LLout)
+     Iout = IN'  * cos(Beta*LLout) - j*VelN / ZO*sin(Beta*LLout)
+
+where
+
+      VelN is the voltage present at the terminals of the last
+         (longest) element
+      LLout is the length of the termination transmission line
+      ZO is the termination transmission line characteristic
+         impedance (equal to the antenna transmission line 
+         characteristic impedance)
+
+and where
+
+     IN' = VelN / ZR
+
+                Zout + j * ZO   * tan(Beta * LLout)
+     ZR = ZO * ------------------------------------- 
+                ZO   + j * Zout * tan(Beta * LLout)
+
+     Zout is the termination impedance.
+
+
+3.5.  FINDING THE CRITICAL PARAMETERS
+
+     From the currents and voltages just calculated, we can find
+all the critical parameters of the design.  Before we do, it is
+desireable to take care of one small point.  It is convenient to
+normalize all the currents and voltages to 1 Watt of input
+power.  This normalization allows us to compare the directivity
+of this antenna with that of an isotropic antenna driven by an
+ideal source which has the same input power.  That is, for the
+isotropic source there will be no source resistance.  To calculate
+the scale factor, we first need to know the amount of power accepted
+by the antenna.  This value was calculated in Section 3.4 as
+
+               1
+     POWERIN = - (Iin) (Iin*) [real(ZinAS) + Rs]
+               2
+
+The scale factor is
+
+     SCALE = sqrt(WATTS / POWERIN)
+
+where WATTS = 1 Watt of input power
+      sqrt() is the square root function.  
+
+Now we multiply all currents and voltages by the value of SCALE.
+
+     The gain of an isotropic antenna is given in dB as
+
+     Gain_Iso = 10.0 * log10(WATTS / (4 * PI * RADIUS**2))
+
+where RADIUS is a distance sufficiently far from the antenna to
+      ensure the measurement is in the far-field.
+
+     Next, the pattern of the antenna is calculated as given in
+the book (old eq. 6-52) using the appropriate direction cosines
+for our geometry.  The front-to-back ratio is found by examination
+of the pattern on boresight and 180 degrees from boresight.  The
+front-to-sidelobe level is found by searching for the next
+largest local maximum besides the main beam.  It is possible
+that the main beam has split, and the front-to-sidelobe level is
+negative (in dB).  The program then converts the currents and
+voltages to dB at some phase angle in degrees (this is for
+output purposes).  Finally, it finds the VSWR by computing
+the reflection coefficient, ABS_GAM as
+
+                | ZinA - ZCin |
+      ABS_GAM = | ----------- |
+                | ZinA + ZCin |
+
+where |z| represents the magnitude of the complex argument, z.
+
+The VSWR is then
+
+              1 + ABS_GAM
+      VSWR = -------------
+              1 - ABS_GAM
+
+This is the VSWR in the source transmission line relative to the 
+characteristic impedance of that line.
+
+
+4.  SUBTLETIES AND ASSUMPTIONS
+
+     This section contains a list of assumptions and subtle
+points associated with this design and analysis program.  For
+further comments, please see Section 6., VERIFICATION AND
+VALIDATION SUMMARY.
+
+     The technique used to find the antenna impedance matrix is
+actually an approximation which [6] calls "significant."
+Excitation of one element has an effect on another element 
+which in turn has an effect on a third, and so forth.  The method
+used disregards the secondary effects on the third and 
+subsequent interactions.
+
+     By applying a unit voltage at element 1, we have normalized
+the source voltage, Vin, located away from element 1 down the
+source transmission line, to a value for which we later solve. 
+That is, for the purpose of calculation, we merely assume an
+input current of 1 Amp and take care of the scaling later.
+
+     Notice that this routine can analyze other antenna arrays
+as well.  For instance, proper modification of the transmission
+line matrix, YT, and the antenna elements matrix, ZA, allow
+us to analyze an array of dipoles located arbitrarily in space
+whether or not they are connected.  Additional modifications to
+the routine which finds the gain allows analysis of elements
+other than dipoles.
+
+     In fact, [6] tells how to extend this program with very
+little modification to include arrays of log-periodic dipole
+arrays.
+
+     The excitation matrix, I = [1 0 0 ... 0]T can be used in
+other useful ways.  For instance, changing the excitation matrix
+to I = [ ... 0 0 0 1]T allows the user to investigate problems
+arising from reflections at the termination.  I = [1 1 ... 1]T
+allows the user to investigate arrays of independently driven
+dipoles.  Of course, the transmission line matrix, YT, must be
+removed (or set to 0) if the elements are not connected.
+
+     The input impedances can be confusing.  One could see
+50 Ohms of input impedance as measured at the source (ZinAS)
+while the input impedance seen at the shortest element of the
+antenna is something completely different.  Therefore, one must
+ensure that ALL impedance match for the highest efficiency.
+That is, ideally Rs = 0, ZinAS = ZinA = Rin.
+
+     The optimal value of the termination impedance will change
+with frequency.  If the antenna is radiating from the shortest
+elements, Zout should equal ZO.  If the antenna is radiating from
+the longest elements, then Zout approximately should equal Rin.
+Since these values are close together, picking Zout = Rin should
+be sufficient.
+
+     The gain of this antenna can be increased beyond that
+predicted by Figure 11-13 and [11].  The classic LPDA antenna uses
+a metal boom as a transmission line.  If the antenna transmission
+line were allowed to meander slightly between elements, the phase of
+the current could be forced to change precisely (not approximately)
+by 180 degrees between elements.
+
+
+5.  OUTPUT PARAMETERS
+
+5.1.  DESCRIPTION
+
+     Many of the output parameters have already been described. 
+All input parameters (and quantities easily derivable, such as
+Alpha from Sigma and Tau) are also output, so they will not be
+discussed here.  The output depends on what analysis options
+were chosen.  What follows is a list of all available outputs.
+
+     Voltages and currents at all elements, the source, and the
+        termination.
+     Gain pattern (in dBi) of the E-plane, H-plane, and a custom 
+        plane for a single frequency.
+     Swept frequency analysis of the gain, front-to-back ratio,
+        front-to-sidelobe ratio, input impedance, and VSWR.
+     Single frequency analysis of the gain, front-to-back ratio, 
+        front-to-sidelobe ratio, input impedance, and VSWR.
+     Characteristic impedance of the antenna transmission line.
+
+
+5.2.  OUTPUT FILES
+
+     Log-Perd.FOR outputs several files depending on the options
+chosen during the input portion of the program.  These files are
+
+     Log-Perd.INI An input file which is automatically updated
+                  every time the program is executed.  If the file
+                  does not exist in the current directory, it is
+                  created using default values.
+
+     LP_DES.OUT   File containing a design summary.
+
+     LP_CPL.OUT   File containing a design summary and parameters
+                  analyzed at a particular frequency and measured
+                  in the custom plane.
+
+     LP_EPL.OUT   File containing a design summary and parameters
+                  analyzed at a particular frequency and measured
+                  in the E-plane.
+
+     LP_HPL.OUT   File containing a design summary and parameters
+                  analyzed at a particular frequency and measured
+                  in the H-plane.
+
+     LP_SWEPT.DAT File containing the result of a swept frequency
+                  analysis and measured in the E-plane.
+
+     LP_GAIN.DAT  File containing two columns: frequency and gain
+                  on boresight (dBi).  Suitable for use with the
+                  plotting program.
+
+     LP_FTBR.DAT  File containing two columns: frequency and front
+                  to back ratio (dB).  Suitable for use with the
+                  plotting program.
+
+     LP_SRC.DAT   File containing two columns: frequency and 
+                  magnitude of the input impedance measured at the
+                  source looking toward the antenna.
+                  Suitable for use with the plotting program.
+
+     LP_Z_ANT.DAT File containing two columns: frequency and 
+                  magnitude of the input impedance measured at the
+                  input terminals of the antenna (not at the source).
+                  Suitable for use with the plotting program.
+
+     LP_VSWR.DAT  File containing two columns: frequency and VSWR
+                  measured in the input line.  Suitable for use with
+                  the plotting program.
+
+     LP_EPAT.DAT  File containing the E-plane gain (dBi) as a function
+                  of angle.  Suitable for use with the plotting program.
+
+     LP_HPAT.DAT  File containing the H-plane gain (dBi)as a function
+                  of angle.  Suitable for use with the plotting program.
+
+     LP_CPAT.DAT  File containing the C-plane gain (dBi) as a function
+                  of angle.  Suitable for use with the plotting program.
+
+
+6.  VERIFICATION AND VALIDATION SUMMARY
+
+     This program has undergone extensive, though not
+exhaustive, testing to ensure that each module and the total
+program work as they were intended.  However, no rigorous
+testing has been performed which ensures that the models are
+accurate (validation).  Instead, the outputs from this program
+were casually compared to previously published results, such as
+earlier editions of the book [9] and other sources already cited. 
+Furthermore, some hand waving, such as occurs in the description
+of the program in the book on page 565, allows us to feel good about
+the accuracy of the program without rigorously proving it.
+
+Assumptions include
+
+     All conductors are lossless.
+     The medium surrounding the antenna has unity relative 
+        permittivity and permeability.
+     All parts are perfectly manufactured and connected. In
+        particular, the feed is perfectly balanced.
+     The current distribution on each element is sinusoidal.
+     The antenna transmission line can be spaced precisely and 
+        uniformly along its length.
+     The computer has no round-off error, especially with regard 
+        to matrix inversion.
+
+     At the subroutine level, each module was checked with
+simple test cases to verify its accuracy.
+
+     FINDST  Tested with sample inputs and compared to Figure 
+             11.13 in the book.  Note that the book makes a 1 dB 
+             correction to the results originally published[7].  
+             It is known that there is a mistake in this 
+             reference, and the amount of error varies from
+             about 0.5 to 2 dB.  Therefore, the optimum design as  
+             calculated by this program will be slightly in 
+             error.  This program could be used to find a 
+             corrected version of Figure 11.13, to the accuracy 
+             of the other error sources and assumptions.  This
+             exercise has been done, although with a different
+             program, and the results are published[11].
+     FINDZ   Tested by comparison of the results to identical 
+             cases calculated in MathCAD which used the integral 
+             equations of 7-29 and 7-39a.  As described in Part 4,
+             SUBTLETIES AND ASSUMPTIONS, an approximation is made
+             with regard to removing all elements except two:  the 
+             excited one and the one under observation.  
+     INPUT   Tested by direct observation of the results.
+     LUSOLV  Tested by sample test matrices[12].
+     LUDEC   Tested by sample test matrices[12].
+     OUTPUT1 Tested by direct observation of the results.
+     OUTPUT2 Tested by direct observation of the results.
+     PATTERN Tested indirectly by comparison of the analysis 
+             results to published results[].
+     R2POL   Tested with sample inputs with the ouput compared to
+             hand calculations.
+     SICI    Tested with sample inputs and compared to [13]
+     SLL     Tested by direct observation of the results.
+
+     At the program level, the results were checked against
+previously published results, against previously written
+code in MathCAD, and against sanity checks.
+
+
+7.  FORTRAN Compilation
+
+     The code contained in Log-Perd.FOR is written for the FORTRAN
+77 language standard.  It was developed on a PC using Microsoft
+FORTRAN Power Station for Windows and Windows 95 and has also been
+successfully compiled on a Sun workstation.
+
+
+8.  CREDITS
+
+     This program and all its subroutines were created by
+Mr. Chris Bishop with the exception of the matrix inversion
+routines, LUSOLV and LUDEC, and the sine and cosine integrals,
+SI and CI.  The matrix inversion routines were created by
+Dr. James T. Aberle, and the sine and cosine integrals were
+created by Mr. Anastasis Polycarpou.  In both cases the routines
+were made for the Telecommunications Research Center at Arizona
+State University.
+
+
+Biography
+
+MR. CHRIS BISHOP received his bachelor's and master's degrees in
+electrical engineering from the Georgia Institute of Technology
+in 1990 and 1991, respectively.  His research focused precisely
+on modeling log-periodic dipole arrays.  From 1992 through 1995
+he worked for Phase IV Systems, Inc. testing radar seekers in 
+Hardware-in-the-Loop environments for US Army Missile Command.
+His chief tasks there included analysis of existing electronics,
+microwave devices, and radiating elements, as well as 
+specification of a compact antenna range.  Currently, Mr. Bishop
+attends Arizona State University where he pursues the Ph.D. in
+electrical engineering.
+
+
+Acknowledgements
+
+Mr. Bishop would like to thank Dr. Ed B. Joy of the Georgia
+Institute of Technology for inspiring him to pursue antennas as
+an area of research, Dr. Michael D. Fahey for making him realize
+engineering is less of a job than it is a way of life, Dr. James
+T. Aberle for allowing him time from his regular duties to write
+the code for this application, and Dr. Constantine A. Balanis
+for agreeing to include this code in his book.
+
+
+9.  REFERENCES
+
+[1]  V.H. Rumsey, "Frequency Independent Antennas."  1957 IRE
+     National Convention Record, pt 1, pp 114 - 118.
+
+[2]  D.K. Cheng, FIELD AND WAVE ELECTROMAGNETICS, 2ed, Addison-
+     Wesley Publishing Co., Reading, Massachusetts, pp. 449-455,
+     1989.
+  
+[3]  S. Ramo, J.R. Whinnery, and T. van Duzer,  FIELDS AND WAVES
+     IN COMMUNICATION ELECTRONICS, 2ed, John Wiley & Sons, 
+     New York, p 252, 1984.
+
+[4]  G. De Vito and G.B. Stracca, "Further Comments on the Design
+     of Log-Periodic Dipole Antennas," IEEE Trans. Antennas
+     Propag., vol. AP-22, No. 5, pp. 714-718, September 1974.
+
+[5]  R.C. Jasik and H. Jasik, HANDBOOK OF ANTENNA ENGINEERING,
+     McGraw-Hill, New York, 1984.
+
+[6]  R.H. Kyle, "Mutual Coupling Between Log-Periodic Dipole
+     Antennas," General Electric Tech. Info. Series, Report No.
+     R69ELS-3, Chapter 2, December 1968.
+
+[7]  R.L. Carrel, "Analysis and Design of the Log-Periodic Dipole
+     Antenna," Ph.D. Dissertation, Elec. Eng. Dept., University of
+     Illinois, 1961, University Microfilms, Inc., Ann Arbor,
+     Michigan.
+
+[8]  M.T. Ma, THEORY AND APPLICATION OF ANTENNA ARRAYS, John Wiley
+     & Sons, New York, Chapter 5, 1974.
+
+[9]  C.A. Balanis, ANTENNA THEORY ANALYSIS AND DESIGN, John Wiley
+     & Sons, New York, 1982.
+
+[10] H.E. King, "Mutual Impedance of Unequal Length Antennas in
+     Echelon," IRE Trans. on Antennas and Propag., AP-5, pp 306-313,
+     July 1957.
+
+[11] Y.T. Lo and S.W. Lee,  ANTENNA HANDBOOK THEORY, APPLICATIONS,
+     AND DESIGN, Van Nostrand Reinhold Company, New York, pp 9-23,
+     1988.
+
+[12] J.R. Westlake, A HANDBOOK OF NUMERICAL MATRIX INVERSION AND
+     SOLUTION OF LINEAR EQUATIONS, John Wiley & Sons, New York,
+     Appendix C, 1968.
+
+[13] M. Abramowitz and I. Stegun, editors, HANDBOOK OF MATHEMATICAL
+     FUNCTIONS, ninth printing, Dover Publications, New York, 1970.
