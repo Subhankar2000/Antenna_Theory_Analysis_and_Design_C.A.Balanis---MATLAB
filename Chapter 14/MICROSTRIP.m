@@ -1,5 +1,5 @@
 %*******************************************************************
-%  MICROSTRI
+%  MICROSTRIP
 %*******************************************************************
 %  THIS PROGRAM IS A MATLAB PROGRAM THAT DESIGNS AND THEN COMPUTES THE
 %  ANTENNA RADIATION CHARACTERISTICS OF:
