@@ -1,5 +1,5 @@
 %**********************************************************************
-%  Reflector.m
+%  Reflectoe.m
 %********************************************************************
 %  The program computes the radiation by a parabolic reflector.
 %  It can be used to investigate the:
